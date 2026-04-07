@@ -6,9 +6,19 @@ import base64
 
 def analyze_image(image_bytes: bytes) -> dict:
     """Full eye/face analysis pipeline — no API keys, all local."""
-    # Decode image
-    nparr = np.frombuffer(image_bytes, np.uint8)
-    img_bgr = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+    # Decode image — try OpenCV first, fallback to Pillow
+    img_bgr = None
+    try:
+        nparr = np.frombuffer(image_bytes, np.uint8)
+        img_bgr = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+    except Exception:
+        pass
+    if img_bgr is None:
+        try:
+            pil_img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+            img_bgr = cv2.cvtColor(np.array(pil_img), cv2.COLOR_RGB2BGR)
+        except Exception as e:
+            return {"error": f"Could not decode image: {str(e)}"}
     if img_bgr is None:
         return {"error": "Could not decode image"}
 
